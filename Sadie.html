@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sadie - Resúmenes con Historial</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #fafafa;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #c2185b;
+    }
+
+    input, button {
+      padding: 12px;
+      font-size: 1rem;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    button {
+      background-color: #c2185b;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    #resultado, #historial {
+      margin-top: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    #historial ul {
+      list-style-type: square;
+      padding-left: 20px;
+    }
+
+    #historial li {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sadie 🌸</h1>
+  <p>Escribe cualquier tema y Sadie buscará un resumen desde Wikipedia en español.</p>
+  <input type="text" id="tema" placeholder="Ej. Fefo, Los hermanos Flores Magón, Revolución Mexicana">
+  <button onclick="buscarResumen()">Obtener resumen</button>
+
+  <div id="resultado"></div>
+  <div id="historial">
+    <h3>🗂 Historial de temas investigados:</h3>
+    <ul id="listaHistorial"></ul>
+  </div>
+
+  <script>
+    function actualizarHistorial(tema) {
+      let historial = JSON.parse(localStorage.getItem("historialSadie")) || [];
+      if (!historial.includes(tema)) {
+        historial.unshift(tema);
+        localStorage.setItem("historialSadie", JSON.stringify(historial));
+      }
+      mostrarHistorial();
+    }
+
+    function mostrarHistorial() {
+      let historial = JSON.parse(localStorage.getItem("historialSadie")) || [];
+      const lista = document.getElementById("listaHistorial");
+      lista.innerHTML = "";
+      historial.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        lista.appendChild(li);
+      });
+    }
+
+    async function buscarResumen() {
+      const input = document.getElementById("tema");
+      const resultado = document.getElementById("resultado");
+      const tema = input.value.trim();
+
+      if (!tema) {
+        resultado.innerHTML = "<p>Por favor, escribe un tema.</p>";
+        return;
+      }
+
+      resultado.innerHTML = "<p>🔍 Buscando en Wikipedia...</p>";
+
+      try {
+        const searchUrl = `https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(tema)}&utf8=&format=json&origin=*`;
+        const searchResponse = await fetch(searchUrl);
+        const searchData = await searchResponse.json();
+
+        if (searchData.query.search.length === 0) {
+          resultado.innerHTML = "<p>No se encontró ningún resultado relacionado. Intenta con otro tema.</p>";
+          return;
+        }
+
+        const titulo = searchData.query.search[0].title;
+        const summaryUrl = `https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(titulo)}`;
+        const summaryResponse = await fetch(summaryUrl);
+        const summaryData = await summaryResponse.json();
+
+        if (summaryData.extract) {
+          resultado.innerHTML = `
+            <h2>${summaryData.title}</h2>
+            <p>${summaryData.extract}</p>
+            <p><a href="https://es.wikipedia.org/wiki/${encodeURIComponent(titulo)}" target="_blank">Leer más en Wikipedia</a></p>
+          `;
+          actualizarHistorial(tema);
+        } else {
+          resultado.innerHTML = "<p>No se encontró un resumen para este tema.</p>";
+        }
+      } catch (error) {
+        resultado.innerHTML = "<p>Ocurrió un error al buscar. Intenta nuevamente más tarde.</p>";
+      }
+    }
+
+    // Permitir Enter
+    document.getElementById("tema").addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        buscarResumen();
+      }
+    });
+
+    // Mostrar historial al cargar
+    window.onload = mostrarHistorial;
+  </script>
+</body>
+</html>
+
+
+
+
+
+
